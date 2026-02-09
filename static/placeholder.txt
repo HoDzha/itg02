@@ -1,0 +1,1 @@
+Static files (CSS/JS) can be added here. Bootstrap loaded from CDN in base template.

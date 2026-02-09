@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Оформление заказа — FlowerDelivery Master{% endblock %}
+{% block content %}
+<h1 class="mb-4">Оформление заказа</h1>
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Данные для доставки</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-fd">Подтвердить заказ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Состав заказа</h5>
+                <ul class="list-group list-group-flush">
+                    {% for product, qty in cart_items %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{{ product.name }} × {{ qty }}</span>
+                        <span>{{ product.price|floatformat:0 }} ₽</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="fw-bold mt-2 mb-0">Итого: {{ cart_total|floatformat:0 }} ₽</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Заказ #{{ order.id }} — FlowerDelivery Master{% endblock %}
+{% block content %}
+<h1 class="mb-4">Заказ #{{ order.id }}</h1>
+<div class="card mb-3">
+    <div class="card-body">
+        <p><strong>Статус:</strong> {{ order.get_status_display }}</p>
+        <p><strong>Дата:</strong> {{ order.created_at|date:"d.m.Y H:i" }}</p>
+        <p><strong>Адрес доставки:</strong> {{ order.delivery_address }}</p>
+        <p><strong>Телефон:</strong> {{ order.delivery_phone }}</p>
+        {% if order.comment %}<p><strong>Комментарий:</strong> {{ order.comment }}</p>{% endif %}
+    </div>
+</div>
+<h5>Состав заказа</h5>
+<table class="table">
+    <thead><tr><th>Товар</th><th>Цена</th><th>Кол-во</th><th>Сумма</th></tr></thead>
+    <tbody>
+    {% for item in order.items.all %}
+    <tr>
+        <td>{{ item.product.name }}</td>
+        <td>{{ item.price }} ₽</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.subtotal }} ₽</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+<p class="fw-bold">Итого: {{ order.total|floatformat:0 }} ₽</p>
+<a href="{% url 'orders:reorder' order.id %}" class="btn btn-fd">Повторить заказ</a>
+<a href="{% url 'orders:order_list' %}" class="btn btn-outline-secondary">К списку заказов</a>
+{% endblock %}

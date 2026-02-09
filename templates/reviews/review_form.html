@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}Отзыв — {{ product.name }}{% endblock %}
+{% block content %}
+<h2>Оставить отзыв: {{ product.name }}</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-fd">Отправить</button>
+    <a href="{% url 'catalog:product_detail' product.pk %}" class="btn btn-outline-secondary">Отмена</a>
+</form>
+{% endblock %}

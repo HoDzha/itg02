@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Отчёты — FlowerDelivery Master{% endblock %}
+{% block content %}
+<h1 class="mb-4">Отчёты</h1>
+<table class="table">
+    <thead><tr><th>Дата</th><th>Заказ</th><th>Прибыль</th><th>Расходы</th></tr></thead>
+    <tbody>
+    {% for report in reports %}
+    <tr>
+        <td>{{ report.date|date:"d.m.Y" }}</td>
+        <td>{% if report.order %}#{{ report.order.id }}{% else %}—{% endif %}</td>
+        <td>{{ report.profit|floatformat:0 }} ₽</td>
+        <td>{{ report.expenses|floatformat:0 }} ₽</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4" class="text-muted">Нет отчётов.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+<p><a href="{% url 'analytics:dashboard' %}" class="btn btn-outline-secondary">Назад к аналитике</a></p>
+{% endblock %}
