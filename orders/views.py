@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.conf import settings
+from django.utils import timezone
 from catalog.models import Product
 from .models import Order, OrderItem
 from .cart import (
@@ -11,6 +12,33 @@ from .cart import (
 from .forms import CheckoutForm
 from .telegram_notify import send_order_to_telegram, send_status_to_telegram
 
+# Ограничения количества в корзине
+CART_QUANTITY_MIN = 1
+CART_QUANTITY_MAX = 99
+
+
+def _parse_quantity(value, default=1, allow_zero=False):
+    """Безопасный парсинг количества: минимум 1 (или 0 при allow_zero), максимум CART_QUANTITY_MAX."""
+    try:
+        qty = int(value)
+    except (TypeError, ValueError):
+        return default
+    if allow_zero and qty <= 0:
+        return 0
+    if qty < CART_QUANTITY_MIN:
+        return CART_QUANTITY_MIN
+    if qty > CART_QUANTITY_MAX:
+        return CART_QUANTITY_MAX
+    return qty
+
+
+def _is_within_working_hours():
+    """Проверка, что текущее время в рабочем интервале приёма заказов."""
+    start = getattr(settings, 'ORDER_WORKING_HOURS_START', 9)
+    end = getattr(settings, 'ORDER_WORKING_HOURS_END', 21)
+    now = timezone.localtime(timezone.now())
+    return start <= now.hour < end
+
 
 def cart_view(request):
     items = get_cart_items(request)
@@ -19,7 +47,7 @@ def cart_view(request):
 
 def cart_add(request, product_id):
     product = get_object_or_404(Product, id=product_id, is_available=True)
-    qty = int(request.GET.get('quantity', 1))
+    qty = _parse_quantity(request.GET.get('quantity', 1), default=1)
     add_to_cart(request, product_id, qty)
     messages.success(request, f'«{product.name}» добавлен в корзину.')
     next_url = request.GET.get('next') or request.META.get('HTTP_REFERER') or 'catalog:product_list'
@@ -35,7 +63,7 @@ def cart_remove(request, product_id):
 def cart_update(request, product_id):
     if request.method != 'POST':
         return redirect('orders:cart')
-    qty = int(request.POST.get('quantity', 0))
+    qty = _parse_quantity(request.POST.get('quantity', 0), default=0, allow_zero=True)
     set_cart_quantity(request, product_id, qty)
     return redirect('orders:cart')
 
@@ -47,9 +75,28 @@ def checkout_view(request):
         messages.warning(request, 'Корзина пуста.')
         return redirect('catalog:product_list')
 
+    start_h = getattr(settings, 'ORDER_WORKING_HOURS_START', 9)
+    end_h = getattr(settings, 'ORDER_WORKING_HOURS_END', 21)
+    within_hours = _is_within_working_hours()
+    if not within_hours:
+        messages.info(
+            request,
+            f'Заказы принимаются только в рабочее время: с {start_h}:00 до {end_h}:00. '
+            'Пожалуйста, оформите заказ в этот интервал или вернитесь позже.'
+        )
+        form = CheckoutForm(user=request.user)
+        return render(request, 'orders/checkout.html', {'form': form, 'cart_items': items, 'within_working_hours': False})
+
     if request.method == 'POST':
         form = CheckoutForm(request.POST, user=request.user)
         if form.is_valid():
+            if not _is_within_working_hours():
+                messages.warning(
+                    request,
+                    f'К сожалению, рабочий день закончился (приём заказов с {start_h}:00 до {end_h}:00). '
+                    'Пожалуйста, повторите попытку завтра.'
+                )
+                return render(request, 'orders/checkout.html', {'form': form, 'cart_items': items})
             order = Order.objects.create(
                 user=request.user,
                 delivery_address=form.cleaned_data['delivery_address'],
@@ -65,7 +112,7 @@ def checkout_view(request):
     else:
         form = CheckoutForm(user=request.user)
 
-    return render(request, 'orders/checkout.html', {'form': form, 'cart_items': items})
+    return render(request, 'orders/checkout.html', {'form': form, 'cart_items': items, 'within_working_hours': True})
 
 
 @login_required

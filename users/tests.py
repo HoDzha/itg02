@@ -1,5 +1,6 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.conf import settings
 from .models import User
 
 
@@ -36,4 +37,9 @@ class UserLoginTest(TestCase):
     def test_login_redirects_authenticated(self):
         self.client.login(username='loginuser', password='testpass123')
         response = self.client.get(reverse('users:login'))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 302, 'Аутентифицированный пользователь должен перенаправляться с страницы входа')
+        redirect_url = reverse(settings.LOGIN_REDIRECT_URL)
+        self.assertTrue(
+            response.url.endswith(redirect_url) or redirect_url in response.url,
+            f'Редирект должен вести на {settings.LOGIN_REDIRECT_URL}, получен: {response.url}'
+        )

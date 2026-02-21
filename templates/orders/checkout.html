@@ -10,7 +10,11 @@
                 <form method="post">
                     {% csrf_token %}
                     {{ form.as_p }}
+                    {% if within_working_hours %}
                     <button type="submit" class="btn btn-fd">Подтвердить заказ</button>
+                    {% else %}
+                    <p class="text-muted small">Кнопка оформления доступна в рабочее время.</p>
+                    {% endif %}
                 </form>
             </div>
         </div>
